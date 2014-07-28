@@ -4,7 +4,7 @@ $(builddir)/libopenredir.c: $(srcdir)/libopenredir.c.in
 lib_LTLIBRARIES = libopenredir.la
 libopenredir_la_SOURCES = libopenredir.c
 libopenredir_la_LDFLAGS = -export-dynamic -avoid-version
-dist_data_DATA = libopenredir.c.in
+EXTRA_DIST = libopenredir.c.in
 
 bin_PROGRAMS=openredir
 openredir_SOURCES=openredir.c
