@@ -1,0 +1,95 @@
+#include<stdarg.h>
+#include<dlfcn.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<limits.h>
+#include<unistd.h>
+
+#include<lua.h>
+#include<lualib.h>
+#include<lauxlib.h>
+
+{% set functions = [
+    ['open', [['int', 'flags'], ['mode_t', 'mode']]],
+    ['open64', [['int', 'flags'], ['mode_t', 'mode']]],
+    ['creat', [['mode_t', 'mode']]],
+    ['__open_2', [['int', 'flags']]],
+  ] %}
+
+static int lib_initialized = 0;
+{% for func, args in functions %}static int (*orig_{{func}})(const char*{{''.join(', ' + x[0] for x in args)}}) = 0;
+{% end %}
+static lua_State *L = NULL;
+void lib_init();
+
+void die(char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vfprintf(stderr, fmt, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+  fflush(stderr);
+  exit(-1);
+}
+
+static char* redirect(const char* file){
+  int ret;
+  const char *new;
+  lua_getglobal(L, "redirect");
+  lua_pushstring(L, file);
+  ret = lua_pcall(L, 1, 1, 0);
+  if(ret){
+    fprintf(stderr, "取得重定向文件路径时出错了： %s\n", lua_tostring(L, -1));
+    lua_pop(L, 1); /* 错误信息 */
+    return (char*)file;
+  }else{
+    new = lua_tostring(L, -1);
+    lua_pop(L, 1); /* 返回值 */
+  }
+  return (char*)new;
+}
+
+{% for func, args in functions %}
+int {{func}}(const char* file{{''.join(', ' + ' '.join(x) for x in args)}}) {
+  lib_init();
+  file = redirect(file);
+  return orig_{{func}}(file{{''.join(', ' + x[1] for x in args)}});
+}
+{% end %}
+
+void lib_init() {
+  void *libhdl;
+  char *dlerr;
+
+  if (lib_initialized) return;
+
+  if (!(libhdl=dlopen("libc.so.6", RTLD_LAZY)))
+    die("Failed to patch library calls: %s", dlerror());
+
+  {% for func, args in functions %}
+  orig_{{func}} = dlsym(libhdl, "{{func}}");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch {{func}}() library call: %s", dlerr);
+  {% end %}
+
+  int ret;
+  L = luaL_newstate();
+  luaL_openlibs(L);
+  char config[PATH_MAX];
+  strcpy(config, getenv("HOME"));
+  strcat(config, "/.openredir.lua");
+  ret = luaL_dofile(L, config);
+  if(ret){
+    die("Error run ~/.openredir.lua");
+  }
+  lua_getglobal(L, "redirect");
+  if(!lua_isfunction(L,-1)){
+    die("Error run 'redirect' function in openredir.lua");
+  }
+  lua_pop(L, 1);
+
+  lib_initialized = 1;
+}
+
+/* vim: set syntax=c.tornadotmpl: */
