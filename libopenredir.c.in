@@ -11,14 +11,16 @@
 #include<lauxlib.h>
 
 {% set functions = [
-    ['open', [['int', 'flags'], ['mode_t', 'mode']]],
-    ['open64', [['int', 'flags'], ['mode_t', 'mode']]],
-    ['creat', [['mode_t', 'mode']]],
-    ['__open_2', [['int', 'flags']]],
+    ['open', [['const char*', 'file'], ['int', 'flags'], ['mode_t', 'mode']]],
+    ['open64', [['const char*', 'file'], ['int', 'flags'], ['mode_t', 'mode']]],
+    ['creat', [['const char*', 'file'], ['mode_t', 'mode']]],
+    ['__open_2', [['const char*', 'file'], ['int', 'flags']]],
+    ['__lxstat', [['int', 'vers'], ['const char*', 'file'], ['void*', 'buf']]],
   ] %}
+{% autoescape None %}
 
 static int lib_initialized = 0;
-{% for func, args in functions %}static int (*orig_{{func}})(const char*{{''.join(', ' + x[0] for x in args)}}) = 0;
+{% for func, args in functions %}static int (*orig_{{func}})({{', '.join(x[0] for x in args)}}) = 0;
 {% end %}
 static lua_State *L = NULL;
 void lib_init();
@@ -33,12 +35,13 @@ void die(char *fmt, ...) {
   exit(-1);
 }
 
-static char* redirect(const char* file){
+static char* redirect(const char* func, const char* file){
   int ret;
   const char *new;
   lua_getglobal(L, "redirect");
+  lua_pushstring(L, func);
   lua_pushstring(L, file);
-  ret = lua_pcall(L, 1, 1, 0);
+  ret = lua_pcall(L, 2, 1, 0);
   if(ret){
     fprintf(stderr, "取得重定向文件路径时出错了： %s\n", lua_tostring(L, -1));
     lua_pop(L, 1); /* 错误信息 */
@@ -51,10 +54,10 @@ static char* redirect(const char* file){
 }
 
 {% for func, args in functions %}
-int {{func}}(const char* file{{''.join(', ' + ' '.join(x) for x in args)}}) {
+int {{func}}({{', '.join(' '.join(x) for x in args)}}) {
   lib_init();
-  file = redirect(file);
-  return orig_{{func}}(file{{''.join(', ' + x[1] for x in args)}});
+  file = redirect({{'"' + func.replace('"', r'\"') + '"'}}, file);
+  return orig_{{func}}({{', '.join(x[1] for x in args)}});
 }
 {% end %}
 
