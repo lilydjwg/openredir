@@ -14,13 +14,14 @@
     ['open', [['const char*', 'file'], ['int', 'flags'], ['mode_t', 'mode']]],
     ['open64', [['const char*', 'file'], ['int', 'flags'], ['mode_t', 'mode']]],
     ['creat', [['const char*', 'file'], ['mode_t', 'mode']]],
+    ['readlink', [['const char*', 'file'], ['char*', 'buf'], ['size_t', 'bufsiz']], 'ssize_t'],
     ['__open_2', [['const char*', 'file'], ['int', 'flags']]],
     ['__lxstat', [['int', 'vers'], ['const char*', 'file'], ['void*', 'buf']]],
   ] %}
 {% autoescape None %}
 
 static int lib_initialized = 0;
-{% for func, args in functions %}static int (*orig_{{func}})({{', '.join(x[0] for x in args)}}) = 0;
+{% for func, args, *rest in functions %}static {{rest[0] if rest else 'int'}} (*orig_{{func}})({{', '.join(x[0] for x in args)}}) = 0;
 {% end %}
 static lua_State *L = NULL;
 void lib_init();
@@ -53,8 +54,8 @@ static char* redirect(const char* func, const char* file){
   return (char*)new;
 }
 
-{% for func, args in functions %}
-int {{func}}({{', '.join(' '.join(x) for x in args)}}) {
+{% for func, args, *rest in functions %}
+{{rest[0] if rest else 'int'}} {{func}}({{', '.join(' '.join(x) for x in args)}}) {
   lib_init();
   file = redirect({{'"' + func.replace('"', r'\"') + '"'}}, file);
   return orig_{{func}}({{', '.join(x[1] for x in args)}});
@@ -70,7 +71,7 @@ void lib_init() {
   if (!(libhdl=dlopen("libc.so.6", RTLD_LAZY)))
     die("Failed to patch library calls: %s", dlerror());
 
-  {% for func, args in functions %}
+  {% for func, args, *rest in functions %}
   orig_{{func}} = dlsym(libhdl, "{{func}}");
   if ((dlerr=dlerror()) != NULL)
     die("Failed to patch {{func}}() library call: %s", dlerr);
