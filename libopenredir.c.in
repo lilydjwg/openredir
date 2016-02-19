@@ -17,6 +17,8 @@
     ['readlink', [['const char*', 'file'], ['char*', 'buf'], ['size_t', 'bufsiz']], 'ssize_t'],
     ['__open_2', [['const char*', 'file'], ['int', 'flags']]],
     ['__lxstat', [['int', 'vers'], ['const char*', 'file'], ['void*', 'buf']]],
+    ['__lxstat64', [['int', 'vers'], ['const char*', 'file'], ['void*', 'buf']]],
+    ['execve', [['const char*', 'file'], ['char *const*', 'argv'], ['char *const*', 'envp']]],
   ] %}
 {% autoescape None %}
 
