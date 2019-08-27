@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import os
+import subprocess
+from argparse import ArgumentParser
+from tempfile import TemporaryDirectory
+
+parser = ArgumentParser(description="openredir CLI helper")
+parser.add_argument(
+    '-r', '--rule',
+    metavar="RULE",
+    action="append",
+    help='Specify a rule in ORIGIN:REPLACEMENT format, can be specified multiple times. (Example: /etc/resolv.conf:/tmp/my_resolv.conf)',
+)
+parser.add_argument(
+    'command',
+    metavar="COMMAND",
+    nargs="+",
+    help="Command to run")
+
+options = parser.parse_args()
+
+LUA_SRC = "function redirect(f, s)"
+
+for rule in options.rule:
+    LUA_SRC += 's = s:gsub("{}", "{}")'.format(*rule.split(":"))
+
+LUA_SRC += "return s\nend\n"
+
+with TemporaryDirectory() as d:
+    with open(d + "/.openredir.lua", "w") as f:
+        f.write(LUA_SRC)
+
+    os.environ['HOME'] = d
+
+    subprocess.Popen(["openredir"] + options.command).wait()
