@@ -19,6 +19,7 @@ static int (*orig_open64)(const char*, int, mode_t) = 0;
 static int (*orig_creat)(const char*, mode_t) = 0;
 static ssize_t (*orig_readlink)(const char*, char*, size_t) = 0;
 static int (*orig___open_2)(const char*, int) = 0;
+static int (*orig___open64_2)(const char*, int) = 0;
 static int (*orig___lxstat)(int, const char*, void*) = 0;
 static int (*orig___lxstat64)(int, const char*, void*) = 0;
 static int (*orig_execve)(const char*, char *const*, char *const*) = 0;
@@ -85,6 +86,12 @@ int __open_2(const char* file, int flags) {
   return orig___open_2(file, flags);
 }
 
+int __open64_2(const char* file, int flags) {
+  lib_init();
+  file = redirect("__open64_2", file);
+  return orig___open64_2(file, flags);
+}
+
 int __lxstat(int vers, const char* file, void* buf) {
   lib_init();
   file = redirect("__lxstat", file);
@@ -133,6 +140,10 @@ void lib_init() {
   orig___open_2 = dlsym(libhdl, "__open_2");
   if ((dlerr=dlerror()) != NULL)
     die("Failed to patch __open_2() library call: %s", dlerr);
+  
+  orig___open64_2 = dlsym(libhdl, "__open64_2");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch __open64_2() library call: %s", dlerr);
   
   orig___lxstat = dlsym(libhdl, "__lxstat");
   if ((dlerr=dlerror()) != NULL)
