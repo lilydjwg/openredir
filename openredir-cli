@@ -5,32 +5,38 @@ import subprocess
 from argparse import ArgumentParser
 from tempfile import TemporaryDirectory
 
-parser = ArgumentParser(description="openredir CLI helper")
-parser.add_argument(
-    '-r', '--rule',
-    metavar="RULE",
-    action="append",
-    help='Specify a rule in ORIGIN:REPLACEMENT format, can be specified multiple times. (Example: /etc/resolv.conf:/tmp/my_resolv.conf)',
-)
-parser.add_argument(
-    'command',
-    metavar="COMMAND",
-    nargs="+",
-    help="Command to run")
 
-options = parser.parse_args()
+def main():
+    parser = ArgumentParser(description="openredir CLI helper")
+    parser.add_argument(
+        '-r', '--rule',
+        metavar="RULE",
+        action="append",
+        help='Specify a rule in ORIGIN:REPLACEMENT format, can be specified multiple times. (Example: /etc/resolv.conf:/tmp/my_resolv.conf)',
+    )
+    parser.add_argument(
+        'command',
+        metavar="COMMAND",
+        nargs="+",
+        help="Command to run")
 
-LUA_SRC = "function redirect(f, s)"
+    options = parser.parse_args()
 
-for rule in options.rule:
-    LUA_SRC += 's = s:gsub("{}", "{}")'.format(*rule.split(":"))
+    LUA_SRC = "function redirect(f, s)"
 
-LUA_SRC += "return s\nend\n"
+    for rule in options.rule:
+        LUA_SRC += 's = s:gsub("{}", "{}")'.format(*rule.split(":"))
 
-with TemporaryDirectory() as d:
-    with open(d + "/.openredir.lua", "w") as f:
-        f.write(LUA_SRC)
+    LUA_SRC += "return s\nend\n"
 
-    os.environ['HOME'] = d
+    with TemporaryDirectory() as d:
+        with open(d + "/.openredir.lua", "w") as f:
+            f.write(LUA_SRC)
 
-    subprocess.Popen(["openredir"] + options.command).wait()
+        os.environ['OPENREDIR_CONFDIR'] = d
+
+        subprocess.Popen(["openredir"] + options.command).wait()
+
+
+if __name__ == '__main__':
+    main()
