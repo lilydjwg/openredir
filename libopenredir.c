@@ -163,9 +163,9 @@ void lib_init() {
   luaL_openlibs(L);
   char config[PATH_MAX];
   if (getenv("OPENREDIR_CONFDIR"))
-    strcpy(config, getenv("OPENREDIR_CONFDIR"));
+    strncpy(config, getenv("OPENREDIR_CONFDIR"), PATH_MAX);
   else
-    strcpy(config, getenv("HOME"));
+    strncpy(config, getenv("HOME"), PATH_MAX);
 
   strcat(config, "/.openredir.lua");
   ret = luaL_dofile(L, config);
