@@ -1,5 +1,5 @@
 $(builddir)/libopenredir.c: $(srcdir)/libopenredir.c.in
-	tornado_tmpl $< $@
+	$(srcdir)/tornado_tmpl $< $@
 
 lib_LTLIBRARIES = libopenredir.la
 libopenredir_la_SOURCES = libopenredir.c
