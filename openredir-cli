@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 from argparse import ArgumentParser
 from tempfile import TemporaryDirectory
 
@@ -35,8 +36,8 @@ def main():
 
         os.environ['OPENREDIR_CONFDIR'] = d
 
-        subprocess.Popen(["openredir"] + options.command).wait()
+        return subprocess.Popen(["openredir"] + options.command).wait()
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
