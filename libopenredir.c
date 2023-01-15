@@ -20,9 +20,14 @@ static int (*orig_creat)(const char*, mode_t) = 0;
 static ssize_t (*orig_readlink)(const char*, char*, size_t) = 0;
 static int (*orig___open_2)(const char*, int) = 0;
 static int (*orig___open64_2)(const char*, int) = 0;
+static int (*orig_stat)(const char*, void*) = 0;
+static int (*orig_statx)(int, const char*, int, unsigned int, void*) = 0;
 static int (*orig___lxstat)(int, const char*, void*) = 0;
 static int (*orig___lxstat64)(int, const char*, void*) = 0;
 static int (*orig_execve)(const char*, char *const*, char *const*) = 0;
+static void* (*orig_opendir)(const char*) = 0;
+static ssize_t (*orig_getxattr)(const char*, const char*, void*, size_t) = 0;
+static ssize_t (*orig_lgetxattr)(const char*, const char*, void*, size_t) = 0;
 
 static lua_State *L = NULL;
 void lib_init();
@@ -92,6 +97,18 @@ int __open64_2(const char* file, int flags) {
   return orig___open64_2(file, flags);
 }
 
+int stat(const char* file, void* buf) {
+  lib_init();
+  file = redirect("stat", file);
+  return orig_stat(file, buf);
+}
+
+int statx(int fd, const char* file, int flags, unsigned int mask, void* buf) {
+  lib_init();
+  file = redirect("statx", file);
+  return orig_statx(fd, file, flags, mask, buf);
+}
+
 int __lxstat(int vers, const char* file, void* buf) {
   lib_init();
   file = redirect("__lxstat", file);
@@ -108,6 +125,24 @@ int execve(const char* file, char *const* argv, char *const* envp) {
   lib_init();
   file = redirect("execve", file);
   return orig_execve(file, argv, envp);
+}
+
+void* opendir(const char* file) {
+  lib_init();
+  file = redirect("opendir", file);
+  return orig_opendir(file);
+}
+
+ssize_t getxattr(const char* file, const char* name, void* value, size_t size) {
+  lib_init();
+  file = redirect("getxattr", file);
+  return orig_getxattr(file, name, value, size);
+}
+
+ssize_t lgetxattr(const char* file, const char* name, void* value, size_t size) {
+  lib_init();
+  file = redirect("lgetxattr", file);
+  return orig_lgetxattr(file, name, value, size);
 }
 
 
@@ -145,6 +180,14 @@ void lib_init() {
   if ((dlerr=dlerror()) != NULL)
     die("Failed to patch __open64_2() library call: %s", dlerr);
   
+  orig_stat = dlsym(libhdl, "stat");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch stat() library call: %s", dlerr);
+  
+  orig_statx = dlsym(libhdl, "statx");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch statx() library call: %s", dlerr);
+  
   orig___lxstat = dlsym(libhdl, "__lxstat");
   if ((dlerr=dlerror()) != NULL)
     die("Failed to patch __lxstat() library call: %s", dlerr);
@@ -156,6 +199,18 @@ void lib_init() {
   orig_execve = dlsym(libhdl, "execve");
   if ((dlerr=dlerror()) != NULL)
     die("Failed to patch execve() library call: %s", dlerr);
+  
+  orig_opendir = dlsym(libhdl, "opendir");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch opendir() library call: %s", dlerr);
+  
+  orig_getxattr = dlsym(libhdl, "getxattr");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch getxattr() library call: %s", dlerr);
+  
+  orig_lgetxattr = dlsym(libhdl, "lgetxattr");
+  if ((dlerr=dlerror()) != NULL)
+    die("Failed to patch lgetxattr() library call: %s", dlerr);
   
 
   int ret;

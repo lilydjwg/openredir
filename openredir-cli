@@ -27,7 +27,7 @@ def main():
     for rule in options.rule:
         LUA_SRC += 's = s:gsub("{}", "{}")'.format(*rule.split(":"))
 
-    LUA_SRC += "return s\nend\n"
+    LUA_SRC += "return s end\n"
 
     with TemporaryDirectory() as d:
         with open(d + "/.openredir.lua", "w") as f:
